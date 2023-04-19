@@ -1,6 +1,6 @@
 ﻿@page "/"
 @using BulmaRazor.Components
-@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 
 <PageTitle>Index</PageTitle>
 
@@ -15,7 +15,7 @@ Welcome to your new app.
                 <Column Size="Size.TwoThirds">
                     <Box>
                         <Textarea @bind-Value="text" placeholder="Normal textarea"></Textarea><br>
-                        <Button Color="Color.Link" IsOutlined IsFullwidth @onclick="Save"></Button>
+                        <Button Color="Color.Link" IsOutlined IsFullwidth @onclick="Save">Save</Button>
                     </Box>
                 </Column>
                 <Column>
@@ -65,17 +65,17 @@ Welcome to your new app.
 
     async Task Save()
     {
-        await localStorage.SetItemAsStringAsync(Guid.NewGuid().ToString(), text);
+        await LocalStorage.SetItemAsStringAsync(Guid.NewGuid().ToString(), text);
         await GetMemos();
     }
 
     async Task GetMemos()
     {
-        var keys = await localStorage.KeysAsync();
+        var keys = await LocalStorage.KeysAsync();
         memos.Clear();
         foreach (var itemKey in keys)
         {
-            memos.Add(itemKey,await localStorage.GetItemAsStringAsync(itemKey));
+            memos.Add(itemKey, await LocalStorage.GetItemAsStringAsync(itemKey));
         }
     }
 }
