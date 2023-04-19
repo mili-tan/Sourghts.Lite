@@ -1,0 +1,81 @@
+﻿@page "/"
+@using BulmaRazor.Components
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+
+<PageTitle>Index</PageTitle>
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+<div class="mt-3">
+    <Columns>
+        <Column>
+            <Columns IsMobile>
+                <Column Size="Size.TwoThirds">
+                    <Box>
+                        <Textarea @bind-Value="text" placeholder="Normal textarea"></Textarea><br>
+                        <Button Color="Color.Link" IsOutlined IsFullwidth @onclick="Save"></Button>
+                    </Box>
+                </Column>
+                <Column>
+                    <Box>
+                        <Calendar FirstDayOfWeek="DayOfWeek.Sunday" DayHeight="20px"></Calendar>
+                    </Box>
+                </Column>
+            </Columns>
+        </Column>
+    </Columns>
+    
+    @foreach (var i in memos)
+    {
+        <div class="mt-3">
+            <Card>
+                <CardHeader>
+                    <CardHeaderTitle class="m-0">@i.Key</CardHeaderTitle>
+                    <CardHeaderIcon>
+                        <Icon IconClass="fa fa-angle-down"></Icon>
+                    </CardHeaderIcon>
+                </CardHeader>
+                <CardContent>
+                    <div class="content">
+                        @i.Value
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <CardFooterItem href="#">Save</CardFooterItem>
+                    <CardFooterItem href="#">Edit</CardFooterItem>
+                    <CardFooterItem href="#">Delete</CardFooterItem>
+                </CardFooter>
+            </Card>
+        </div>
+    }
+
+</div>
+
+@code
+{
+    public string text = string.Empty;
+    public Dictionary<string, string> memos = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetMemos();
+    }
+
+    async Task Save()
+    {
+        await localStorage.SetItemAsStringAsync(Guid.NewGuid().ToString(), text);
+        await GetMemos();
+    }
+
+    async Task GetMemos()
+    {
+        var keys = await localStorage.KeysAsync();
+        memos.Clear();
+        foreach (var itemKey in keys)
+        {
+            memos.Add(itemKey,await localStorage.GetItemAsStringAsync(itemKey));
+        }
+    }
+}
