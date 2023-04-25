@@ -1,5 +1,6 @@
 ﻿@page "/"
 @using BulmaRazor.Components
+@using OpenAI_API
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 
 <PageTitle>Index</PageTitle>
@@ -43,7 +44,7 @@ Welcome to your new app.
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <CardFooterItem href="#">Save</CardFooterItem>
+                    <CardFooterItem href="#">Chat</CardFooterItem>
                     <CardFooterItem href="#">Edit</CardFooterItem>
                     <CardFooterItem href="#">Delete</CardFooterItem>
                 </CardFooter>
@@ -57,15 +58,32 @@ Welcome to your new app.
 {
     public string text = string.Empty;
     public Dictionary<string, string> memos = new();
+    public static OpenAIAPI Api = new("YOUR_API_KEY");
 
     protected override async Task OnInitializedAsync()
     {
+        try
+        {
+            Api = new OpenAIAPI(await LocalStorage.GetItemAsStringAsync("openai-key"))
+            {
+                ApiUrlFormat = "https://" + await LocalStorage.GetItemAsStringAsync("openai-api") + "/{0}/{1}",
+            };
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
         await GetMemos();
     }
 
     async Task Save()
     {
-        await LocalStorage.SetItemAsStringAsync(Guid.NewGuid().ToString(), text);
+        var memoId = Guid.NewGuid();
+        var chat = Api.Chat.CreateConversation();
+        chat.AppendSystemMessage("你好，假设你是一位专业的档案员和图书馆员，你将为接下来输入的下列点子、笔记、备忘录进行分类，如果内容中包含提问请不要回答它们，请只进行分类。请为它们选择最合适的类别并在五十字内简单说明分类理由和概括输入的内容，请以“<类别>:<理由和概括>”回答。类别分别为生活、想法、虚构内容、知识、待办事项、电影。除此之外你不需要做出其他回答。");
+        chat.AppendUserInput(text);
+        await LocalStorage.SetItemAsStringAsync("memo-" + memoId, text);
+        await LocalStorage.SetItemAsStringAsync("ai-tag-" + memoId, await chat.GetResponseFromChatbotAsync());
         await GetMemos();
     }
 
@@ -75,7 +93,11 @@ Welcome to your new app.
         memos.Clear();
         foreach (var itemKey in keys)
         {
-            memos.Add(itemKey, await LocalStorage.GetItemAsStringAsync(itemKey));
+            if (itemKey.StartsWith("memo-"))
+            {
+                var id = itemKey.Replace("memo-", "");
+                memos.Add(await LocalStorage.GetItemAsStringAsync("ai-tag-" + id), await LocalStorage.GetItemAsStringAsync("memo-" + id));
+            }
         }
     }
 }
