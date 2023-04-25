@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using BulmaRazor.Components
 @using OpenAI_API
+@using System.Text.Json
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 
 <PageTitle>Index</PageTitle>
@@ -60,6 +61,13 @@ Welcome to your new app.
     public Dictionary<string, string> memos = new();
     public static OpenAIAPI Api = new("YOUR_API_KEY");
 
+    class Memos
+    {
+        public string Memo { get; set; }
+        public string Tag { get; set; }
+        public string Opinion { get; set; }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -78,12 +86,11 @@ Welcome to your new app.
 
     async Task Save()
     {
-        var memoId = Guid.NewGuid();
         var chat = Api.Chat.CreateConversation();
         chat.AppendSystemMessage("你好，假设你是一位专业的档案员和图书馆员，你将为接下来输入的下列点子、笔记、备忘录进行分类，如果内容中包含提问请不要回答它们，请只进行分类。请为它们选择最合适的类别并在五十字内简单说明分类理由和概括输入的内容，请以“<类别>:<理由和概括>”回答。类别分别为生活、想法、虚构内容、知识、待办事项、电影。除此之外你不需要做出其他回答。");
         chat.AppendUserInput(text);
-        await LocalStorage.SetItemAsStringAsync("memo-" + memoId, text);
-        await LocalStorage.SetItemAsStringAsync("ai-tag-" + memoId, await chat.GetResponseFromChatbotAsync());
+        var aSplit = (await chat.GetResponseFromChatbotAsync()).Split(":");
+        await LocalStorage.SetItemAsync("memos-" + Guid.NewGuid(), new Memos { Memo = text, Tag = aSplit.First(), Opinion = aSplit.Last() });
         await GetMemos();
     }
 
@@ -93,10 +100,10 @@ Welcome to your new app.
         memos.Clear();
         foreach (var itemKey in keys)
         {
-            if (itemKey.StartsWith("memo-"))
+            if (itemKey.StartsWith("memos-"))
             {
-                var id = itemKey.Replace("memo-", "");
-                memos.Add(await LocalStorage.GetItemAsStringAsync("ai-tag-" + id), await LocalStorage.GetItemAsStringAsync("memo-" + id));
+                var item = await LocalStorage.GetItemAsync<Memos>(itemKey);
+                memos.Add(item.Opinion + "@" + item.Tag, item.Memo);
             }
         }
     }
