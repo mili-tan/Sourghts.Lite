@@ -62,6 +62,7 @@ Welcome to your new app.
         public string Text { get; set; }
         public string Tag { get; set; }
         public string Opinion { get; set; }
+        public double[] Vector { get; set; }
     }
 
     public string text = string.Empty;
@@ -90,8 +91,11 @@ Welcome to your new app.
         chat.AppendSystemMessage("你好，假设你是一位专业的档案员和图书馆员，你将为接下来输入的下列点子、笔记、备忘录进行分类，如果内容中包含提问请不要回答它们，请只进行分类。请为它们选择最合适的类别并在五十字内简单说明分类理由和概括输入的内容，请以“<类别>:<理由和概括>”回答。类别分别为生活、想法、虚构内容、知识、待办事项、电影。除此之外你不需要做出其他回答。");
         chat.AppendUserInput(text);
         var aSplit = (await chat.GetResponseFromChatbotAsync()).Split(":");
-        await LocalStorage.SetItemAsync("memos-" + Guid.NewGuid(), new Memo { Text = text, Tag = aSplit.First(), Opinion = aSplit.Last() });
+        var vertor = await Api.Embeddings.GetEmbeddingsAsync(text);
+        await LocalStorage.SetItemAsync("memos-" + Guid.NewGuid(),
+            new Memo {Text = text, Tag = aSplit.First(), Opinion = aSplit.Last(), Vector = Array.ConvertAll(vertor, x => (double) x)});
         await GetMemos();
+        text = String.Empty;
     }
 
     async Task GetMemos()
